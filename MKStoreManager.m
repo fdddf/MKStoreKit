@@ -293,7 +293,7 @@ static MKStoreManager* _sharedStoreManager;
 
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
-	if (!isProductsAvailable)
+	if (!self.isProductsAvailable)
 	{
 		[self.purchasableObjects addObjectsFromArray:response.products];
 	}
