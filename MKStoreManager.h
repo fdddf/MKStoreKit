@@ -68,6 +68,8 @@
 - (NSMutableDictionary *)pricesDictionary;
 - (NSMutableArray*) purchasableObjectsDescription;
 
+- (void)reloadProducts;
+
 // use this method to start a purchase
 - (void) buyFeature:(NSString*) featureId
          onComplete:(void (^)(NSString* purchasedFeature, NSData*purchasedReceipt, NSArray* availableDownloads)) completionBlock

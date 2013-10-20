@@ -293,7 +293,10 @@ static MKStoreManager* _sharedStoreManager;
 
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
-	[self.purchasableObjects addObjectsFromArray:response.products];
+	if (!self.isProductsAvailable)
+	{
+		[self.purchasableObjects addObjectsFromArray:response.products];
+	}
 	
 #ifndef NDEBUG
 	for(int i=0;i<[self.purchasableObjects count];i++)
@@ -307,7 +310,7 @@ static MKStoreManager* _sharedStoreManager;
 		NSLog(@"Problem in iTunes connect configuration for product: %@", invalidProduct);
 #endif
   
-	self.isProductsAvailable = YES;
+	self.isProductsAvailable = (self.purchasableObjects.count > 0);
   [[NSNotificationCenter defaultCenter] postNotificationName:kProductFetchedNotification
                                                       object:[NSNumber numberWithBool:self.isProductsAvailable]];
 	self.productsRequest = nil;
@@ -319,6 +322,11 @@ static MKStoreManager* _sharedStoreManager;
   [[NSNotificationCenter defaultCenter] postNotificationName:kProductFetchedNotification
                                                       object:[NSNumber numberWithBool:self.isProductsAvailable]];
 	self.productsRequest = nil;
+}
+
+- (void)reloadProducts
+{
+    [self requestProductData];
 }
 
 // call this function to check if the user has already purchased your feature
@@ -437,6 +445,16 @@ static MKStoreManager* _sharedStoreManager;
   self.onTransactionCompleted = completionBlock;
   self.onTransactionCancelled = cancelBlock;
   
+	// if the product doesn't exist, don't even try
+	if ([self getProductIndex:featureId] == NSNotFound)
+	{
+		if(self.onTransactionCancelled)
+		{
+			self.onTransactionCancelled();
+		}
+		return;
+	}
+
   [MKSKProduct verifyProductForReviewAccess:featureId
                                  onComplete:^(NSNumber * isAllowed)
    {
@@ -461,22 +479,27 @@ static MKStoreManager* _sharedStoreManager;
    }];
 }
 
+-(NSUInteger)getProductIndex:(NSString*) productId
+{
+    NSArray *allIds = [self.purchasableObjects valueForKey:@"productIdentifier"];
+    return [allIds indexOfObject:productId];	
+}
+
 -(void) addToQueue:(NSString*) productId
 {
-  if ([SKPaymentQueue canMakePayments])
+	if ([SKPaymentQueue canMakePayments])
 	{
-    NSArray *allIds = [self.purchasableObjects valueForKey:@"productIdentifier"];
-    int index = [allIds indexOfObject:productId];
-    
-    if(index == NSNotFound) return;
-    
-    SKProduct *thisProduct = [self.purchasableObjects objectAtIndex:index];
-		SKPayment *payment = [SKPayment paymentWithProduct:thisProduct];
-		[[SKPaymentQueue defaultQueue] addPayment:payment];
+		int index = [self getProductIndex:productId];
+		
+		if(index == NSNotFound) return;
+		
+		SKProduct *thisProduct = [self.purchasableObjects objectAtIndex:index];
+			SKPayment *payment = [SKPayment paymentWithProduct:thisProduct];
+			[[SKPaymentQueue defaultQueue] addPayment:payment];
 	}
 	else
 	{
-    [self showAlertWithTitle:NSLocalizedString(@"In-App Purchasing disabled", @"")
+		[self showAlertWithTitle:NSLocalizedString(@"In-App Purchasing disabled", @"")
                      message:NSLocalizedString(@"Check your parental control settings and try again later", @"")];
 	}
 }
