@@ -37,8 +37,6 @@
 #import <StoreKit/StoreKit.h>
 #import "MKStoreKitConfigs.h"
 
-#define kReceiptStringKey @"MK_STOREKIT_RECEIPTS_STRING"
-
 #ifndef NDEBUG
 #define kReceiptValidationURL @"https://sandbox.itunes.apple.com/verifyReceipt"
 #else
@@ -49,6 +47,9 @@
 #define kSubscriptionsPurchasedNotification @"MKStoreKitSubscriptionsPurchased"
 #define kSubscriptionsInvalidNotification @"MKStoreKitSubscriptionsInvalid"
 
+typedef void (^MKStoreRemoteProvideContentFinishedBlock)(BOOL success);
+typedef void (^MKStoreRemoteProvideContentBlock)(SKPaymentTransaction *transaction, MKStoreRemoteProvideContentFinishedBlock callback);
+
 @interface MKStoreManager : NSObject<SKProductsRequestDelegate, SKPaymentTransactionObserver>
 
 // These are the methods you will be using in your app
@@ -57,12 +58,15 @@
 // this is a class method, since it doesn't require the store manager to be initialized prior to calling
 + (BOOL) isFeaturePurchased:(NSString*) featureId;
 
-@property (nonatomic, strong) NSMutableArray *purchasableObjects;
+@property (nonatomic) BOOL isProductsAvailable;
+@property (nonatomic, strong) NSArray *purchasableObjects;
 @property (nonatomic, strong) NSMutableDictionary *subscriptionProducts;
 #ifdef __IPHONE_6_0
 @property (strong, nonatomic) NSMutableArray *hostedContents;
 @property (nonatomic, copy) void (^hostedContentDownloadStatusChangedHandler)(NSArray* hostedContent);
 #endif
+@property (nonatomic, copy) MKStoreRemoteProvideContentBlock remoteContentProvider;
+
 // convenience methods
 //returns a dictionary with all prices for identifiers
 - (NSMutableDictionary *)pricesDictionary;
@@ -79,18 +83,18 @@
 - (void) restorePreviousTransactionsOnComplete:(void (^)(void)) completionBlock
                                        onError:(void (^)(NSError* error)) errorBlock;
 
-// For consumable support
-- (BOOL) canConsumeProduct:(NSString*) productName quantity:(int) quantity;
-- (BOOL) consumeProduct:(NSString*) productName quantity:(int) quantity;
+// Subscription
 - (BOOL) isSubscriptionActive:(NSString*) featureId;
 
 // for testing proposes you can use this method to remove all the saved keychain data (saved purchases, etc.)
 - (BOOL) removeAllKeychainData;
+
+// Requesting product data
+- (void) requestProductData;
 
 // You wont' need this normally. MKStoreKit automatically takes care of remembering receipts.
 // but in case you want the receipt data to be posted to your server, use this.
 +(id) receiptForKey:(NSString*) key;
 +(void) setObject:(id) object forKey:(NSString*) key;
 +(NSNumber*) numberForKey:(NSString*) key;
-
 @end
