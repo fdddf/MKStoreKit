@@ -50,7 +50,7 @@
 
 @interface MKStoreManager () //private methods and properties
 
-@property (nonatomic, copy) void (^onTransactionCancelled)();
+@property (nonatomic, copy) void (^onTransactionCancelled)(NSError *error);
 @property (nonatomic, copy) void (^onTransactionCompleted)(NSString *productId, NSData* receiptData, NSArray* downloads);
 
 @property (nonatomic, copy) void (^onRestoreFailed)(NSError* error);
@@ -440,7 +440,7 @@ static MKStoreManager* _sharedStoreManager;
 
 - (void) buyFeature:(NSString*) featureId
          onComplete:(void (^)(NSString*, NSData*, NSArray*)) completionBlock
-        onCancelled:(void (^)(void)) cancelBlock
+        onCancelled:(void (^)(NSError *error)) cancelBlock
 {
   self.onTransactionCompleted = completionBlock;
   self.onTransactionCancelled = cancelBlock;
@@ -450,7 +450,7 @@ static MKStoreManager* _sharedStoreManager;
 	{
 		if(self.onTransactionCancelled)
 		{
-			self.onTransactionCancelled();
+			self.onTransactionCancelled(nil);
 		}
 		return;
 	}
@@ -778,7 +778,7 @@ static MKStoreManager* _sharedStoreManager;
   [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
   
   if(self.onTransactionCancelled)
-    self.onTransactionCancelled();
+    self.onTransactionCancelled(transaction.error);
 }
 
 - (void) completeTransaction: (SKPaymentTransaction *)transaction
